@@ -1,0 +1,1 @@
+/usr/bin/gcc   -I/usr/include -pthread -g -Wall -Werror  -fPIC  -L/usr/lib64 -lgtest -pthread -lgtest_main CMakeFiles/memshell.dir/src/memshell.c.o  -o memshell -rdynamic liballocphy.so -Wl,-rpath,/user/1/.base/corteshs/home/tp/ensimag-allocateur/build 
