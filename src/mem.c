@@ -14,6 +14,7 @@
 void *zone_memoire = 0;
 
 typedef struct element {
+	void *adresse;
 	struct element *suivant;
 } Element;
 
@@ -39,6 +40,7 @@ int mem_init() {
     return -1;
   }
 
+  //Initialisation de SIZE
   int i, j = 0;
   SIZE[0] = 1;
   for (i = 1; i < WBUDDY_MAX_INDEX/2; i++){
@@ -48,10 +50,14 @@ int mem_init() {
   }
   SIZE[WBUDDY_MAX_INDEX-1] = 1<<i;
   
+  //Initialisation de SUBBUDDY
   SUBBUDDY[0] = 0;
   for (i = 1; i < WBUDDY_MAX_INDEX; i++){
 	  SUBBUDDY[i] = find_index(SIZE, WBUDDY_MAX_INDEX, (SIZE[i] - SIZE[i-1]));
   }
+  
+  //Initialisation de TZL
+  TZL[WBUDDY_MAX_INDEX-1].adresse = zone_memoire;
 
   return 0;
 }
@@ -91,11 +97,12 @@ int mem_destroy() {
 int main (void) {
 	mem_init();
 	int i;
+	printf("%p", zone_memoire);
 	for (i = 0; i < WBUDDY_MAX_INDEX; i++){
 	  printf("%d ", i);
 	  printf("%d \t", SIZE[i]);
-	  printf("%d \n", SUBBUDDY[i]);
-	}
-        
+	  printf("%d \t", SUBBUDDY[i]);
+	  printf("%p \n", TZL[i].adresse);
+	}        
     return 0;
 }
