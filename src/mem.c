@@ -13,7 +13,6 @@
 
 void *zone_memoire = 0;
 
-/* ecrire votre code ici */
 typedef struct element {
 	struct element *suivant;
 } Element;
@@ -22,17 +21,24 @@ int SIZE[WBUDDY_MAX_INDEX];
 int SUBBUDDY[WBUDDY_MAX_INDEX];
 Element TZL[WBUDDY_MAX_INDEX];
 
-/*alloue la zone de mémoire (c’est le seul malloc autorisé dans votre code)et réalise l’initialisation des structures de données utilisées par le gestionnaire d’allocation de la mémoire. L’adresse de la zone sera conservée dans la variable globale zone_memoire.
-La fonction retournera un code d’erreur indiquant si l’initialisation s’est bien passée ou non. Elle renvoie 0 si tout s’est bien passé. */
+int find_index(int a[], int num_elements, int value) {
+   int i;
+   for (i = 0; i < num_elements; i++) {
+	 if (a[i] == value) {
+	    return(i);  /* it was found */
+	 }
+   }
+   return(-1);  /* if it was not found */
+}
+
 int mem_init() {
-  /*if (! zone_memoire)
+  if (! zone_memoire)
     zone_memoire = (void *) malloc(ALLOC_MEM_SIZE);
   if (zone_memoire == 0) {
     perror("mem_init:");
     return -1;
-  }*/
+  }
 
-  /* ecrire votre code ici */
   int i, j = 0;
   SIZE[0] = 1;
   for (i = 1; i < WBUDDY_MAX_INDEX/2; i++){
@@ -41,9 +47,15 @@ int mem_init() {
 	  j++;
   }
   SIZE[WBUDDY_MAX_INDEX-1] = 1<<i;
+  
+  SUBBUDDY[0] = 0;
+  for (i = 1; i < WBUDDY_MAX_INDEX; i++){
+	  SUBBUDDY[i] = find_index(SIZE, WBUDDY_MAX_INDEX, (SIZE[i] - SIZE[i-1]));
+  }
 
   return 0;
 }
+
 
 /*allocation d’une zone mémoire initialement libre de taille tailleZone. La fonction retournera le pointeur vers cette zone mémoire.
 
@@ -81,7 +93,8 @@ int main (void) {
 	int i;
 	for (i = 0; i < WBUDDY_MAX_INDEX; i++){
 	  printf("%d ", i);
-	  printf("%d \n", SIZE[i]);
+	  printf("%d \t", SIZE[i]);
+	  printf("%d \n", SUBBUDDY[i]);
 	}
         
     return 0;
