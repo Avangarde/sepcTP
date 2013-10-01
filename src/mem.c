@@ -14,13 +14,12 @@
 void *zone_memoire = 0;
 
 typedef struct element {
-    void *adresse;
     struct element *suivant;
 } Element;
 
 int SIZE[WBUDDY_MAX_INDEX];
 int SUBBUDDY[WBUDDY_MAX_INDEX];
-Element TZL[WBUDDY_MAX_INDEX];
+Element * TZL[WBUDDY_MAX_INDEX];
 
 int find_index(int a[], int num_elements, int value) {
     int i;
@@ -57,7 +56,7 @@ int mem_init() {
     }
 
     //Initialisation de TZL
-    TZL[WBUDDY_MAX_INDEX - 1].adresse = zone_memoire;
+    TZL[WBUDDY_MAX_INDEX - 1] = (Element*)zone_memoire;
 
     return 0;
 }
@@ -71,15 +70,14 @@ void * mem_alloc(unsigned long size) {
     /*  ecrire votre code ici */
     int i;
     for (i = WBUDDY_MAX_INDEX-1; i >= 0; i--){
-		if (TZL[i].adresse != NULL && SIZE[i] >= size) {
+		if (TZL[i] != NULL && SIZE[i] >= size) {
 			void *adr;
 			if (SIZE[i] == size) {
-				adr = TZL[i].adresse;
-				if (TZL[i].suivant != NULL){
-					TZL[i].adresse = (*TZL[i].suivant).adresse;
-					TZL[i].suivant = (*TZL[i].suivant).suivant;
+				adr = TZL[i];
+				if (TZL[i]->suivant != NULL){
+					TZL[i] = TZL[i]->suivant;
 				} else {
-					TZL[i].adresse = NULL;
+					TZL[i] = NULL;
 				}
 			} else {
 				//Faire les partitions
@@ -143,20 +141,20 @@ int mem_destroy() {
 
 int main(void) {
     mem_init();
+    printf("%p\n", zone_memoire);
     int i;
-    printf("%p", zone_memoire);
     for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
         printf("%d ", i);
         printf("%d \t", SIZE[i]);
         printf("%d \t", SUBBUDDY[i]);
-        printf("%p \n", TZL[i].adresse);
+        printf("%p \n", TZL[i]);
     }
-    printf("%p\n", mem_alloc(1048599));
+    printf("%p\n", mem_alloc(1048576));
     for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
         printf("%d ", i);
         printf("%d \t", SIZE[i]);
         printf("%d \t", SUBBUDDY[i]);
-        printf("%p \n", TZL[i].adresse);
+        printf("%p \n", TZL[i]);
     }
     return 0;
 }
