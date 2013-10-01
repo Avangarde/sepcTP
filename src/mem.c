@@ -70,33 +70,33 @@ tailleZone.
 void * mem_alloc(unsigned long size) {
     /*  ecrire votre code ici */
     int i;
-    for (i = WBUDDY_MAX_INDEX-1; i >= 0; i--){
-		if (TZL[i].adresse != NULL && SIZE[i] >= size) {
-			void *adr;
-			if (SIZE[i] == size) {
-				adr = TZL[i].adresse;
-				if (TZL[i].suivant != NULL){
-					TZL[i].adresse = (*TZL[i].suivant).adresse;
-					TZL[i].suivant = (*TZL[i].suivant).suivant;
-				} else {
-					TZL[i].adresse = NULL;
-				}
-			} else {
-				//Faire les partitions
-				if (i % 2 == 1){ //2^k
-					
-				} else { //3*2^k
-					
-				}
-			}
-			return adr;
-	    }
+    for (i = WBUDDY_MAX_INDEX - 1; i >= 0; i--) {
+        if (TZL[i].adresse != NULL && SIZE[i] >= size) {
+            void *adr;
+            if (SIZE[i] == size) {
+                adr = TZL[i].adresse;
+                if (TZL[i].suivant != NULL) {
+                    TZL[i].adresse = (*TZL[i].suivant).adresse;
+                    TZL[i].suivant = (*TZL[i].suivant).suivant;
+                } else {
+                    TZL[i].adresse = NULL;
+                }
+            } else {
+                //Faire les partitions
+                if (i % 2 == 1) { //2^k
+
+                } else { //3*2^k
+
+                }
+            }
+            return adr;
+        }
     }
     if (i == -1) {
         perror("mem_alloc:");
         return NULL;
     }
-    return 0; 
+    return 0;
 }
 
 /*
@@ -121,9 +121,43 @@ int mem_free(void *ptr, unsigned long size) {
     }
 
 
+    //On fait la fusion entre le buddys... le petit à gauche et le grande à droit
+
+
 
 
     return 0;
+}
+
+void * obtenir_adresse_compagnon(int idx_courante, void *adr) {
+
+    int idx_cible = idx_courante - 3;
+
+    void *min = 0;
+    void *max = 0;
+
+    //valeur a retorner
+    void *adr_buddy;
+    
+    int buddysize;
+
+    while (idx_courante) {
+        if (min == adr && idx_cible == idx_courante) {
+            break;
+        }
+        if ((min + SIZE[SUBBUDDY[idx_courante]]) <= adr){
+            adr_buddy = min;
+            buddysize = SIZE[SUBBUDDY[idx_courante]];
+            min = min + SIZE[SUBBUDDY[idx_courante]];
+            idx_courante--;
+        }else{
+            buddysize =  SIZE[idx_courante - 1];
+            max = min + SIZE[SUBBUDDY[idx_courante]];
+            adr_buddy = max;
+            idx_courante = SUBBUDDY[idx_courante];
+        }
+    }
+
 }
 
 /*libère toutes les structures et la zone de mémoire utilisées.*/
