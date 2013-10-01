@@ -59,11 +59,6 @@ int mem_init() {
     //Initialisation de TZL
     TZL[WBUDDY_MAX_INDEX - 1].adresse = zone_memoire;
 
-    SUBBUDDY[0] = 0;
-    for (i = 1; i < WBUDDY_MAX_INDEX; i++) {
-        SUBBUDDY[i] = find_index(SIZE, WBUDDY_MAX_INDEX, (SIZE[i] - SIZE[i - 1]));
-    }
-
     return 0;
 }
 
@@ -74,7 +69,34 @@ tailleZone.
  */
 void * mem_alloc(unsigned long size) {
     /*  ecrire votre code ici */
-    return 0;
+    int i;
+    for (i = WBUDDY_MAX_INDEX-1; i >= 0; i--){
+		if (TZL[i].adresse != NULL && SIZE[i] >= size) {
+			void *adr;
+			if (SIZE[i] == size) {
+				adr = TZL[i].adresse;
+				if (TZL[i].suivant != NULL){
+					TZL[i].adresse = (*TZL[i].suivant).adresse;
+					TZL[i].suivant = (*TZL[i].suivant).suivant;
+				} else {
+					TZL[i].adresse = NULL;
+				}
+			} else {
+				//Faire les partitions
+				if (i % 2 == 1){ //2^k
+					
+				} else { //3*2^k
+					
+				}
+			}
+			return adr;
+	    }
+    }
+    if (i == -1) {
+        perror("mem_alloc:");
+        return NULL;
+    }
+    return 0; 
 }
 
 /*
@@ -93,10 +115,10 @@ int mem_free(void *ptr, unsigned long size) {
 
     // on ne peut pas liberer une zone situe hors de la zone permis
 
-    if ((ptr < zone_memoire) || (ptr > zone_memoire + HEAP_SIZE)) {
+    /*if ((ptr < zone_memoire) || (ptr > zone_memoire + HEAP_SIZE)) {
         perror("mem_free:");
         return 1;
-    }
+    }*/
 
 
 
@@ -123,6 +145,13 @@ int main(void) {
     mem_init();
     int i;
     printf("%p", zone_memoire);
+    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
+        printf("%d ", i);
+        printf("%d \t", SIZE[i]);
+        printf("%d \t", SUBBUDDY[i]);
+        printf("%p \n", TZL[i].adresse);
+    }
+    printf("%p\n", mem_alloc(1048599));
     for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
         printf("%d ", i);
         printf("%d \t", SIZE[i]);
