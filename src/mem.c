@@ -61,33 +61,44 @@ int mem_init() {
     return 0;
 }
 
-/*allocation d’une zone mémoire initialement libre de taille tailleZone. La fonction retournera le pointeur vers cette zone mémoire.
-
-Le retour sera (void *)0 en cas d’erreur ou s’il n’existe plus d’emplacement libre de taille
-tailleZone.
- */
 void * mem_alloc(unsigned long size) {
-    /*  ecrire votre code ici */
     int i;
     for (i = WBUDDY_MAX_INDEX-1; i >= 0; i--){
 		if (TZL[i] != NULL && SIZE[i] >= size) {
-			void *adr;
 			if (SIZE[i] == size) {
-				adr = TZL[i];
+				void *adr = TZL[i];
 				if (TZL[i]->suivant != NULL){
 					TZL[i] = TZL[i]->suivant;
 				} else {
 					TZL[i] = NULL;
 				}
+				return adr;
 			} else {
 				//Faire les partitions
-				if (i % 2 == 1){ //2^k
-					
-				} else { //3*2^k
-					
+				if (TZL[SUBBUDDY[i]] != NULL){
+					Element * elm = TZL[SUBBUDDY[i]];
+					while (elm->suivant != NULL){
+						elm = elm->suivant;
+					}
+					elm->suivant = TZL[i];
+				} else {
+					TZL[SUBBUDDY[i]] = TZL[i];
+				}
+				if (TZL[i-1] != NULL){
+					Element * elm = TZL[i-1];
+					while (elm->suivant != NULL){
+						elm = elm->suivant;
+					}
+					elm->suivant = (Element*)((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
+				} else {
+					TZL[i-1] = (Element*)((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
+				}
+				if (TZL[i]->suivant != NULL){
+					TZL[i] = TZL[i]->suivant;
+				} else {
+					TZL[i] = NULL;
 				}
 			}
-			return adr;
 	    }
     }
     if (i == -1) {
@@ -149,12 +160,20 @@ int main(void) {
         printf("%d \t", SUBBUDDY[i]);
         printf("%p \n", TZL[i]);
     }
-    printf("%p\n", mem_alloc(1048576));
+    printf("%p\n", mem_alloc(524288));
     for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
         printf("%d ", i);
         printf("%d \t", SIZE[i]);
         printf("%d \t", SUBBUDDY[i]);
-        printf("%p \n", TZL[i]);
+        printf("%p", TZL[i]);
+        Element * elm = TZL[i];
+        while (elm != NULL && elm->suivant != NULL){
+			if (elm->suivant != NULL){
+				printf("\t %p", elm->suivant);
+				elm = elm->suivant;
+			}
+		}
+		printf("\n");
     }
     return 0;
 }
