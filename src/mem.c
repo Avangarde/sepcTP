@@ -113,10 +113,10 @@ int mem_free(void *ptr, unsigned long size) {
 
     // on ne peut pas liberer une zone situe hors de la zone permis
 
-    /*if ((ptr < zone_memoire) || (ptr > zone_memoire + HEAP_SIZE)) {
+    if ((ptr < zone_memoire) || (ptr > zone_memoire + ALLOC_MEM_SIZE)) {
         perror("mem_free:");
         return 1;
-    }*/
+    }
 
 
 
