@@ -120,8 +120,13 @@ int mem_free(void *ptr, unsigned long size) {
         return 1;
     }
 
-    // Je connais mon size, alors
-    //
+    // Je connais mon size, alors je vais trouver ma place dans tzl, apres je sortirai de la liste et deviendrai free
+    int idx = trouver_idx_size(size);
+    void * tailleList = TZL[idx];
+    
+    
+    
+    
 
 
     //On fait la fusion entre le buddys... le petit à gauche et le grande à droit
