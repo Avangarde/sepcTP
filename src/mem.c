@@ -14,13 +14,12 @@
 void *zone_memoire = 0;
 
 typedef struct element {
-    void *adresse;
     struct element *suivant;
 } Element;
 
 int SIZE[WBUDDY_MAX_INDEX];
 int SUBBUDDY[WBUDDY_MAX_INDEX];
-Element TZL[WBUDDY_MAX_INDEX];
+Element * TZL[WBUDDY_MAX_INDEX];
 
 int find_index(int a[], int num_elements, int value) {
     int i;
@@ -57,40 +56,50 @@ int mem_init() {
     }
 
     //Initialisation de TZL
-    TZL[WBUDDY_MAX_INDEX - 1].adresse = zone_memoire;
+    TZL[WBUDDY_MAX_INDEX - 1] = (Element*)zone_memoire;
 
     return 0;
 }
 
-/*allocation d’une zone mémoire initialement libre de taille tailleZone. La fonction retournera le pointeur vers cette zone mémoire.
-
-Le retour sera (void *)0 en cas d’erreur ou s’il n’existe plus d’emplacement libre de taille
-tailleZone.
- */
 void * mem_alloc(unsigned long size) {
-    /*  ecrire votre code ici */
     int i;
-    for (i = WBUDDY_MAX_INDEX - 1; i >= 0; i--) {
-        if (TZL[i].adresse != NULL && SIZE[i] >= size) {
-            void *adr;
-            if (SIZE[i] == size) {
-                adr = TZL[i].adresse;
-                if (TZL[i].suivant != NULL) {
-                    TZL[i].adresse = (*TZL[i].suivant).adresse;
-                    TZL[i].suivant = (*TZL[i].suivant).suivant;
-                } else {
-                    TZL[i].adresse = NULL;
-                }
-            } else {
-                //Faire les partitions
-                if (i % 2 == 1) { //2^k
-
-                } else { //3*2^k
-
-                }
-            }
-            return adr;
-        }
+    for (i = WBUDDY_MAX_INDEX-1; i >= 0; i--){
+		if (TZL[i] != NULL && SIZE[i] >= size) {
+			if (SIZE[i] == size) {
+				void *adr = TZL[i];
+				if (TZL[i]->suivant != NULL){
+					TZL[i] = TZL[i]->suivant;
+				} else {
+					TZL[i] = NULL;
+				}
+				return adr;
+			} else {
+				//Faire les partitions
+				if (TZL[SUBBUDDY[i]] != NULL){
+					Element * elm = TZL[SUBBUDDY[i]];
+					while (elm->suivant != NULL){
+						elm = elm->suivant;
+					}
+					elm->suivant = TZL[i];
+				} else {
+					TZL[SUBBUDDY[i]] = TZL[i];
+				}
+				if (TZL[i-1] != NULL){
+					Element * elm = TZL[i-1];
+					while (elm->suivant != NULL){
+						elm = elm->suivant;
+					}
+					elm->suivant = (Element*)((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
+				} else {
+					TZL[i-1] = (Element*)((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
+				}
+				if (TZL[i]->suivant != NULL){
+					TZL[i] = TZL[i]->suivant;
+				} else {
+					TZL[i] = NULL;
+				}
+			}
+	    }
     }
     if (i == -1) {
         perror("mem_alloc:");
@@ -201,20 +210,28 @@ int mem_destroy() {
 
 int main(void) {
     mem_init();
+    printf("%p\n", zone_memoire);
     int i;
-    printf("%p", zone_memoire);
     for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
         printf("%d ", i);
         printf("%d \t", SIZE[i]);
         printf("%d \t", SUBBUDDY[i]);
-        printf("%p \n", TZL[i].adresse);
+        printf("%p \n", TZL[i]);
     }
-    printf("%p\n", mem_alloc(1048599));
+    printf("%p\n", mem_alloc(524288));
     for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
         printf("%d ", i);
         printf("%d \t", SIZE[i]);
         printf("%d \t", SUBBUDDY[i]);
-        printf("%p \n", TZL[i].adresse);
+        printf("%p", TZL[i]);
+        Element * elm = TZL[i];
+        while (elm != NULL && elm->suivant != NULL){
+			if (elm->suivant != NULL){
+				printf("\t %p", elm->suivant);
+				elm = elm->suivant;
+			}
+		}
+		printf("\n");
     }
     return 0;
 }
