@@ -56,50 +56,50 @@ int mem_init() {
     }
 
     //Initialisation de TZL
-    TZL[WBUDDY_MAX_INDEX - 1] = (Element*)zone_memoire;
+    TZL[WBUDDY_MAX_INDEX - 1] = (Element*) zone_memoire;
 
     return 0;
 }
 
 void * mem_alloc(unsigned long size) {
     int i;
-    for (i = WBUDDY_MAX_INDEX-1; i >= 0; i--){
-		if (TZL[i] != NULL && SIZE[i] >= size) {
-			if (SIZE[i] == size) {
-				void *adr = TZL[i];
-				if (TZL[i]->suivant != NULL){
-					TZL[i] = TZL[i]->suivant;
-				} else {
-					TZL[i] = NULL;
-				}
-				return adr;
-			} else {
-				//Faire les partitions
-				if (TZL[SUBBUDDY[i]] != NULL){
-					Element * elm = TZL[SUBBUDDY[i]];
-					while (elm->suivant != NULL){
-						elm = elm->suivant;
-					}
-					elm->suivant = TZL[i];
-				} else {
-					TZL[SUBBUDDY[i]] = TZL[i];
-				}
-				if (TZL[i-1] != NULL){
-					Element * elm = TZL[i-1];
-					while (elm->suivant != NULL){
-						elm = elm->suivant;
-					}
-					elm->suivant = (Element*)((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
-				} else {
-					TZL[i-1] = (Element*)((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
-				}
-				if (TZL[i]->suivant != NULL){
-					TZL[i] = TZL[i]->suivant;
-				} else {
-					TZL[i] = NULL;
-				}
-			}
-	    }
+    for (i = WBUDDY_MAX_INDEX - 1; i >= 0; i--) {
+        if (TZL[i] != NULL && SIZE[i] >= size) {
+            if (SIZE[i] == size) {
+                void *adr = TZL[i];
+                if (TZL[i]->suivant != NULL) {
+                    TZL[i] = TZL[i]->suivant;
+                } else {
+                    TZL[i] = NULL;
+                }
+                return adr;
+            } else {
+                //Faire les partitions
+                if (TZL[SUBBUDDY[i]] != NULL) {
+                    Element * elm = TZL[SUBBUDDY[i]];
+                    while (elm->suivant != NULL) {
+                        elm = elm->suivant;
+                    }
+                    elm->suivant = TZL[i];
+                } else {
+                    TZL[SUBBUDDY[i]] = TZL[i];
+                }
+                if (TZL[i - 1] != NULL) {
+                    Element * elm = TZL[i - 1];
+                    while (elm->suivant != NULL) {
+                        elm = elm->suivant;
+                    }
+                    elm->suivant = (Element*) ((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
+                } else {
+                    TZL[i - 1] = (Element*) ((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
+                }
+                if (TZL[i]->suivant != NULL) {
+                    TZL[i] = TZL[i]->suivant;
+                } else {
+                    TZL[i] = NULL;
+                }
+            }
+        }
     }
     if (i == -1) {
         perror("mem_alloc:");
@@ -129,19 +129,23 @@ int mem_free(void *ptr, unsigned long size) {
         return 1;
     }
 
-    // Je connais mon size, alors je vais trouver ma place dans tzl, apres je sortirai de la liste et deviendrai free
+    // Je connais mon size, alors je vais trouver ma place dans tzl, apres je serai ajouté a la liste et deviendrai free et allocable
     int idx = trouver_idx_size(size);
     void * tailleList = TZL[idx];
+    //Laisse un ptr sur l'adresse que je dois ajouter
+    if (TZL[idx] != NULL) {
+        Element * elm = TZL[idx];
+        while (elm->suivant != NULL) {
+            elm = elm->suivant;
+        }
+        elm->suivant = ptr;
+    } else {
+        TZL[idx] = ptr;
+    }
+
+    //On essai de faire la fusion entre les buddys... le petit à gauche et le grande à droit... fait dans autre methode.
     
-    
-    
-    
-
-
-    //On fait la fusion entre le buddys... le petit à gauche et le grande à droit
-
-
-
+    fusioner_buddys(ptr, idx);
 
     return 0;
 }
@@ -225,13 +229,13 @@ int main(void) {
         printf("%d \t", SUBBUDDY[i]);
         printf("%p", TZL[i]);
         Element * elm = TZL[i];
-        while (elm != NULL && elm->suivant != NULL){
-			if (elm->suivant != NULL){
-				printf("\t %p", elm->suivant);
-				elm = elm->suivant;
-			}
-		}
-		printf("\n");
+        while (elm != NULL && elm->suivant != NULL) {
+            if (elm->suivant != NULL) {
+                printf("\t %p", elm->suivant);
+                elm = elm->suivant;
+            }
+        }
+        printf("\n");
     }
     return 0;
 }
