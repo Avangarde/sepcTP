@@ -120,6 +120,9 @@ int mem_free(void *ptr, unsigned long size) {
         return 1;
     }
 
+    // Je connais mon size, alors
+    //
+
 
     //On fait la fusion entre le buddys... le petit à gauche et le grande à droit
 
@@ -127,6 +130,22 @@ int mem_free(void *ptr, unsigned long size) {
 
 
     return 0;
+}
+
+int trouver_idx_size(int size) {
+    int derniere_size = 0;
+    int cmpt = 0;
+    while (derniere_size < size) {
+        if (SIZE[cmpt] == size) {
+            //je l'ai trouver
+            return cmpt;
+        }
+        cmpt++;
+    }
+
+    perror("trouver_idx_size:");
+    return -1;
+
 }
 
 void * obtenir_adresse_compagnon(int idx_courante, void *adr) {
@@ -138,20 +157,20 @@ void * obtenir_adresse_compagnon(int idx_courante, void *adr) {
 
     //valeur a retorner
     void *adr_buddy;
-    
+
     int buddysize;
 
     while (idx_courante) {
         if (min == adr && idx_cible == idx_courante) {
             break;
         }
-        if ((min + SIZE[SUBBUDDY[idx_courante]]) <= adr){
+        if ((min + SIZE[SUBBUDDY[idx_courante]]) <= adr) {
             adr_buddy = min;
             buddysize = SIZE[SUBBUDDY[idx_courante]];
             min = min + SIZE[SUBBUDDY[idx_courante]];
             idx_courante--;
-        }else{
-            buddysize =  SIZE[idx_courante - 1];
+        } else {
+            buddysize = SIZE[idx_courante - 1];
             max = min + SIZE[SUBBUDDY[idx_courante]];
             adr_buddy = max;
             idx_courante = SUBBUDDY[idx_courante];
