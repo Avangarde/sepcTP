@@ -31,6 +31,21 @@ int find_index(int a[], int num_elements, int value) {
     return (-1); /* if it was not found */
 }
 
+int trouver_idx_size(int size) {
+    int derniere_size = SIZE[0];
+    int cmpt = 0;
+    while (derniere_size < size) {
+        if (SIZE[cmpt] == size) {
+            //je l'ai trouve
+            return cmpt;
+        }
+        derniere_size = SIZE[++cmpt];
+    }
+
+    perror("trouver_idx_size:");
+    return -1;
+}
+
 int mem_init() {
     if (!zone_memoire)
         zone_memoire = (void *) malloc(ALLOC_MEM_SIZE);
@@ -148,22 +163,6 @@ int mem_free(void *ptr, unsigned long size) {
     fusioner_buddys(ptr, idx);
 
     return 0;
-}
-
-int trouver_idx_size(int size) {
-    int derniere_size = 0;
-    int cmpt = 0;
-    while (derniere_size < size) {
-        if (SIZE[cmpt] == size) {
-            //je l'ai trouver
-            return cmpt;
-        }
-        cmpt++;
-    }
-
-    perror("trouver_idx_size:");
-    return -1;
-
 }
 
 void * obtenir_adresse_compagnon(int idx_courante, void *adr) {
