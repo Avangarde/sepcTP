@@ -32,21 +32,18 @@ int find_index(int a[], int num_elements, int value) {
 }
 
 int trouver_idx_size(int size) {
-    int derniere_size = 0;
+    int derniere_size = SIZE[0];
     int cmpt = 0;
     while (derniere_size < size) {
         if (SIZE[cmpt] == size) {
-            //je l'ai trouvé
+            //je l'ai trouve
             return cmpt;
         }
-
-        derniere_size = SIZE[cmpt];
-        cmpt++;
+        derniere_size = SIZE[++cmpt];
     }
 
     perror("trouver_idx_size:");
     return -1;
-
 }
 
 int mem_init() {
