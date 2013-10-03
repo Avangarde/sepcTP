@@ -77,49 +77,44 @@ void fusioner_buddys(int idx_cible, void *adr) {
             adr_buddy = max;
             idx_courante = SUBBUDDY[idx_courante];
         }
-        printf("adr buddy %p\n", adr_buddy);
     }
     
-    printf("idx courante: %i\n", idx_courante);
-    printf("idx cible %i\n", idx_cible);
+    int idxbuddy = trouver_idx_size(buddysize);
 
     //Necesito conocer simi buddy esta ocupado, si no lo esta he de borrarlo de una vez
-    if (TZL[SUBBUDDY[idx_courante]] != adr_buddy || TZL[SUBBUDDY[idx_courante]] != NULL) {
-        Element * elm = TZL[SUBBUDDY[idx_courante]];
-        while (elm->suivant != adr_buddy || elm->suivant != NULL) {
+    if (TZL[idxbuddy] != adr_buddy && TZL[idxbuddy] != NULL) {
+        Element * elm = TZL[idxbuddy];
+        while (elm->suivant != NULL && elm->suivant != adr_buddy) {
             elm = elm->suivant;
         }
         if (elm->suivant == adr_buddy) {
             elm->suivant = elm->suivant->suivant;
-
         } else {
             //Problema... no lo he encontrado, entonces no esta disponible
             return;
         }
-    } else if (TZL[SUBBUDDY[idx_courante]] == adr_buddy) {
-        TZL[SUBBUDDY[idx_courante]] = NULL;
-
+    } else if (TZL[idxbuddy] == adr_buddy) {
+        TZL[idxbuddy] = NULL;
     } else {
         return;
     }
+    
 
     //Dado que la ejecucion continuo sin retornar, es seguro borrarme de la lista y fusionar.
     //Deberia estar en la lista, luego no se hacen comprobaciones en esta parte
 
-    if (TZL[idx_courante] != adr) {
-        Element * elm = TZL[idx_courante];
+    if (TZL[idx_cible] != adr) {
+        Element * elm = TZL[idx_cible];
         while (elm->suivant != adr) {
             elm = elm->suivant;
         }
-
         elm->suivant = elm->suivant->suivant;
-
     }else{
-        TZL[idx_courante] = TZL[idx_courante]->suivant;
+        TZL[idx_cible] = TZL[idx_cible]->suivant;
     }
     
     //Ahora creamos un slot nuevo con el bloque largo, pero necesito saber donde lo guardare.
-    int new_size = buddysize + SIZE[idx_courante];
+    int new_size = buddysize + SIZE[idx_cible];
     int new_idx = trouver_idx_size(new_size);
     
     void * new_adr;
@@ -247,7 +242,6 @@ int mem_free(void *ptr, unsigned long size) {
 
     // Je connais mon size, alors je vais trouver ma place dans tzl, apres je serai ajouté a la liste et deviendrai free et allocable
     int idx = trouver_idx_size(size);
-    printf("indice: %i\n", idx);
     //Laisse un ptr sur l'adresse que je dois ajouter
     if (TZL[idx] != NULL) {
         Element * elm = TZL[idx];
@@ -257,22 +251,6 @@ int mem_free(void *ptr, unsigned long size) {
         elm->suivant = ptr;
     } else {
         TZL[idx] = ptr;
-    }
-    int i;
-    printf("Antes de fusionar:\n");
-    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
-        printf("%d ", i);
-        printf("%d \t", SIZE[i]);
-        printf("%d \t", SUBBUDDY[i]);
-        printf("%p", TZL[i]);
-        Element * elm = TZL[i];
-        while (elm != NULL && elm->suivant != NULL) {
-            if (elm->suivant != NULL) {
-                printf("\t %p", elm->suivant);
-                elm = elm->suivant;
-            }
-        }
-        printf("\n");
     }
 
     //On essai de faire la fusion entre les buddys... le petit à gauche et le grande à droit... fait dans autre methode.
@@ -288,11 +266,13 @@ int mem_free(void *ptr, unsigned long size) {
 
 int mem_destroy() {
     /* ecrire votre code ici */
+    
 
     if (zone_memoire == NULL) {
         perror("mem_destroy:");
         return 1;
     }
+
 
     free(zone_memoire);
     zone_memoire = 0;
@@ -319,6 +299,9 @@ int main(void) {
         }
         printf("\n");
     }
+    
+    mem_free(mem, 262144);
+    
 
     return 0;
 }
