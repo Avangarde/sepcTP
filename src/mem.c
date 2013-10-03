@@ -34,7 +34,7 @@ int find_index(int a[], int num_elements, int value) {
 int trouver_idx_size(int size) {
     int derniere_size = SIZE[0];
     int cmpt = 0;
-    while (derniere_size < size) {
+    while (derniere_size <= size) {
         if (SIZE[cmpt] == size) {
             //je l'ai trouve
             return cmpt;
@@ -51,7 +51,7 @@ void fusioner_buddys(int idx_cible, void *adr) {
 
     //trouver mon buddy
 
-    int idx_courante = SUBBUDDY[idx_cible];
+    int idx_courante = WBUDDY_MAX_INDEX-1;
 
     void *min = zone_memoire;
     void *max = min + ALLOC_MEM_SIZE;
@@ -77,7 +77,11 @@ void fusioner_buddys(int idx_cible, void *adr) {
             adr_buddy = max;
             idx_courante = SUBBUDDY[idx_courante];
         }
+        printf("adr buddy %p\n", adr_buddy);
     }
+    
+    printf("idx courante: %i\n", idx_courante);
+    printf("idx cible %i\n", idx_cible);
 
     //Necesito conocer simi buddy esta ocupado, si no lo esta he de borrarlo de una vez
     if (TZL[SUBBUDDY[idx_courante]] != adr_buddy || TZL[SUBBUDDY[idx_courante]] != NULL) {
@@ -177,13 +181,14 @@ void * mem_alloc(unsigned long size) {
     for (i = WBUDDY_MAX_INDEX - 1; i >= 0; i--) {
         if (TZL[i] != NULL && SIZE[i] >= size) {
             if (SIZE[i] == size) {
-                void *adr = TZL[i];
-                if (TZL[i]->suivant != NULL) {
-                    TZL[i] = TZL[i]->suivant;
-                } else {
-                    TZL[i] = NULL;
-                }
-                return adr;
+                Element * elem = TZL[i];
+                Element * parent = TZL[i];
+                    while (elem->suivant != NULL) {
+                        parent = elem;
+                        elem = elem->suivant;
+                    }
+                    parent->suivant = NULL;
+                return (void*) elem;
             } else {
                 //Faire les partitions
                 if (TZL[SUBBUDDY[i]] != NULL) {
@@ -242,6 +247,7 @@ int mem_free(void *ptr, unsigned long size) {
 
     // Je connais mon size, alors je vais trouver ma place dans tzl, apres je serai ajouté a la liste et deviendrai free et allocable
     int idx = trouver_idx_size(size);
+    printf("indice: %i\n", idx);
     //Laisse un ptr sur l'adresse que je dois ajouter
     if (TZL[idx] != NULL) {
         Element * elm = TZL[idx];
@@ -251,6 +257,22 @@ int mem_free(void *ptr, unsigned long size) {
         elm->suivant = ptr;
     } else {
         TZL[idx] = ptr;
+    }
+    int i;
+    printf("Antes de fusionar:\n");
+    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
+        printf("%d ", i);
+        printf("%d \t", SIZE[i]);
+        printf("%d \t", SUBBUDDY[i]);
+        printf("%p", TZL[i]);
+        Element * elm = TZL[i];
+        while (elm != NULL && elm->suivant != NULL) {
+            if (elm->suivant != NULL) {
+                printf("\t %p", elm->suivant);
+                elm = elm->suivant;
+            }
+        }
+        printf("\n");
     }
 
     //On essai de faire la fusion entre les buddys... le petit à gauche et le grande à droit... fait dans autre methode.
@@ -280,14 +302,9 @@ int mem_destroy() {
 int main(void) {
     mem_init();
     printf("%p\n", zone_memoire);
+    void * mem = mem_alloc(262144);
+    printf("%p\n", mem);
     int i;
-    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
-        printf("%d ", i);
-        printf("%d \t", SIZE[i]);
-        printf("%d \t", SUBBUDDY[i]);
-        printf("%p \n", TZL[i]);
-    }
-    printf("%p\n", mem_alloc(524288));
     for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
         printf("%d ", i);
         printf("%d \t", SIZE[i]);
@@ -302,5 +319,6 @@ int main(void) {
         }
         printf("\n");
     }
+
     return 0;
 }
