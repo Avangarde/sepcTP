@@ -31,6 +31,24 @@ int find_index(int a[], int num_elements, int value) {
     return (-1); /* if it was not found */
 }
 
+int trouver_idx_size(int size) {
+    int derniere_size = 0;
+    int cmpt = 0;
+    while (derniere_size < size) {
+        if (SIZE[cmpt] == size) {
+            //je l'ai trouvé
+            return cmpt;
+        }
+
+        derniere_size = SIZE[cmpt];
+        cmpt++;
+    }
+
+    perror("trouver_idx_size:");
+    return -1;
+
+}
+
 int mem_init() {
     if (!zone_memoire)
         zone_memoire = (void *) malloc(ALLOC_MEM_SIZE);
@@ -144,41 +162,29 @@ int mem_free(void *ptr, unsigned long size) {
     }
 
     //On essai de faire la fusion entre les buddys... le petit à gauche et le grande à droit... fait dans autre methode.
-    
-    fusioner_buddys(ptr, idx);
+
+    fusioner_buddys(idx, ptr);
 
     return 0;
 }
 
-int trouver_idx_size(int size) {
-    int derniere_size = 0;
-    int cmpt = 0;
-    while (derniere_size < size) {
-        if (SIZE[cmpt] == size) {
-            //je l'ai trouver
-            return cmpt;
-        }
-        cmpt++;
-    }
+void fusioner_buddys(int idx_courante, void *adr) {
+    //est que je suis 2^n ou 3x2^n
 
-    perror("trouver_idx_size:");
-    return -1;
+    //trouver mon buddy
 
-}
+    int idx_courante = SUBBUDDY[idx_cible];
 
-void * obtenir_adresse_compagnon(int idx_courante, void *adr) {
-
-    int idx_cible = idx_courante - 3;
-
-    void *min = 0;
-    void *max = 0;
+    void *min = zone_memoire;
+    void *max = min + ALLOC_MEM_SIZE;
 
     //valeur a retorner
     void *adr_buddy;
 
     int buddysize;
 
-    while (idx_courante) {
+    //Recherche dichotomique
+    while (idx_courante > idx_cible - 3) {
         if (min == adr && idx_cible == idx_courante) {
             break;
         }
@@ -194,6 +200,67 @@ void * obtenir_adresse_compagnon(int idx_courante, void *adr) {
             idx_courante = SUBBUDDY[idx_courante];
         }
     }
+
+    //Necesito conocer simi buddy esta ocupado, si no lo esta he de borrarlo de una vez
+    if (TZL[SUBBUDDY[idx_courante]] != adr_buddy || TZL[SUBBUDDY[idx_courante]] != NULL) {
+        Element * elm = TZL[SUBBUDDY[idx_courante]];
+        while (elm->suivant != adr_buddy || elm->suivant != NULL) {
+            elm = elm->suivant;
+        }
+        if (elm->suivant == adr_buddy) {
+            elm->suivant = elm->suivant->suivant;
+
+        } else {
+            //Problema... no lo he encontrado, entonces no esta disponible
+            return;
+        }
+    } else if (TZL[SUBBUDDY[idx_courante]] == adr_buddy) {
+        TZL[SUBBUDDY[idx_courante]] = NULL;
+
+    } else {
+        return;
+    }
+
+    //Dado que la ejecucion continuo sin retornar, es seguro borrarme de la lista y fusionar.
+    //Deberia estar en la lista, luego no se hacen comprobaciones en esta parte
+
+    if (TZL[idx_courante] != adr) {
+        Element * elm = TZL[idx_courante];
+        while (elm->suivant != adr) {
+            elm = elm->suivant;
+        }
+
+        elm->suivant = elm->suivant->suivant;
+
+    }else{
+        TZL[idx_courante] = TZL[idx_courante]->suivant;
+    }
+    
+    //Ahora creamos un slot nuevo con el bloque largo, pero necesito saber donde lo guardare.
+    new_size = buddysize + SIZE[idx_courante];
+    int new_idx = trouver_idx_size(new_size);
+    
+    int new_adr;
+    if (adr < adr_buddy){
+        new_adr = adr;
+    }else{
+        new_adr = adr_buddy;
+    }
+    
+    if (TZL[new_idx] != NULL) {
+        Element * elm = TZL[new_idx];
+        while (elm->suivant != NULL) {
+            elm = elm->suivant;
+        }
+        elm->suivant = new_adr;
+    } else {
+        TZL[new_idx] = new_adr;
+    }
+
+    //Llamamos recursivamente al metodo para intentar continuar
+
+    fusioner_buddys(idx, ptr);
+
 
 }
 
