@@ -136,7 +136,7 @@ int mem_init() {
         zone_memoire = (void *) malloc(ALLOC_MEM_SIZE);
     if (zone_memoire == 0) {
         perror("mem_init:");
-        return -1;
+        return 1;
     }
 
     //Initialisation de SIZE
@@ -284,7 +284,6 @@ int mem_destroy() {
     
 
     free(zone_memoire);
-    zone_memoire = 0;
     return 0;
 }
 
