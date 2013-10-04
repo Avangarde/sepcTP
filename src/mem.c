@@ -8,25 +8,25 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "mem.h"
+#include <stdbool.h>
 
 /** squelette du TP allocateur memoire */
 
 void *zone_memoire = 0;
 
 typedef struct element {
-    struct element *suivant;
-} Element;
+    struct element * suivant;
+} element;
 
 int SIZE[WBUDDY_MAX_INDEX];
 int SUBBUDDY[WBUDDY_MAX_INDEX];
-Element * TZL[WBUDDY_MAX_INDEX];
+element * TZL[2*WBUDDY_MAX_INDEX];
 
 int trouver_idx_size(int size) {
     int derniere_size = SIZE[0];
     int cmpt = 0;
     while (derniere_size <= size) {
         if (SIZE[cmpt] == size) {
-            //je l'ai trouve
             return cmpt;
         }
         derniere_size = SIZE[++cmpt];
@@ -36,17 +36,16 @@ int trouver_idx_size(int size) {
     return -1;
 }
 
+bool verifier_adr_mem(void *ptr) {
+    return ((ptr >= zone_memoire) && (ptr <= (zone_memoire + ALLOC_MEM_SIZE)));
+}
+
 void fusioner_buddys(int idx_cible, void *adr) {
-    //est que je suis 2^n ou 3x2^n
-
-    //trouver mon buddy
-
     int idx_courante = WBUDDY_MAX_INDEX-1;
 
     void *min = zone_memoire;
     void *max = min + ALLOC_MEM_SIZE;
 
-    //valeur a retorner
     void *adr_buddy;
 
     int buddysize;
@@ -71,16 +70,18 @@ void fusioner_buddys(int idx_cible, void *adr) {
     
     int idxbuddy = trouver_idx_size(buddysize);
 
-    //Necesito conocer simi buddy esta ocupado, si no lo esta he de borrarlo de una vez
     if (TZL[idxbuddy] != adr_buddy && TZL[idxbuddy] != NULL) {
-        Element * elm = TZL[idxbuddy];
+        element * elm = TZL[idxbuddy];
         while (elm->suivant != NULL && elm->suivant != adr_buddy) {
             elm = elm->suivant;
         }
         if (elm->suivant == adr_buddy) {
-            elm->suivant = elm->suivant->suivant;
+            if (verifier_adr_mem(elm->suivant->suivant)){
+                elm->suivant = elm->suivant->suivant;
+            } else {
+                elm->suivant = NULL;
+            }
         } else {
-            //Problema... no lo he encontrado, entonces no esta disponible
             return;
         }
     } else if (TZL[idxbuddy] == adr_buddy) {
@@ -89,21 +90,24 @@ void fusioner_buddys(int idx_cible, void *adr) {
         return;
     }
     
-
-    //Dado que la ejecucion continuo sin retornar, es seguro borrarme de la lista y fusionar.
-    //Deberia estar en la lista, luego no se hacen comprobaciones en esta parte
-
     if (TZL[idx_cible] != adr) {
-        Element * elm = TZL[idx_cible];
+        element * elm = TZL[idx_cible];
         while (elm->suivant != adr) {
             elm = elm->suivant;
         }
-        elm->suivant = elm->suivant->suivant;
+        if (verifier_adr_mem(elm->suivant->suivant)){
+            elm->suivant = elm->suivant->suivant;
+        } else {
+            elm->suivant = NULL;
+        }
     }else{
-        TZL[idx_cible] = TZL[idx_cible]->suivant;
+        if (verifier_adr_mem(TZL[idx_cible]->suivant)){
+            TZL[idx_cible] = TZL[idx_cible]->suivant;
+        } else {
+            TZL[idx_cible] = NULL;
+        }
     }
     
-    //Ahora creamos un slot nuevo con el bloque largo, pero necesito saber donde lo guardare.
     int new_size = buddysize + SIZE[idx_cible];
     int new_idx = trouver_idx_size(new_size);
     
@@ -115,7 +119,7 @@ void fusioner_buddys(int idx_cible, void *adr) {
     }
     
     if (TZL[new_idx] != NULL) {
-        Element * elm = TZL[new_idx];
+        element * elm = TZL[new_idx];
         while (elm->suivant != NULL) {
             elm = elm->suivant;
         }
@@ -124,11 +128,9 @@ void fusioner_buddys(int idx_cible, void *adr) {
         TZL[new_idx] = new_adr;
     }
 
-    //Llamamos recursivamente al metodo para intentar continuar
-
-    fusioner_buddys(new_idx, new_adr);
-
-
+    if (new_idx < 39){
+        fusioner_buddys(new_idx, new_adr);
+    }
 }
 
 int mem_init() {
@@ -156,8 +158,8 @@ int mem_init() {
     }
 
     //Initialisation de TZL
-    TZL[WBUDDY_MAX_INDEX - 1] = (Element*) zone_memoire;
-
+    TZL[WBUDDY_MAX_INDEX - 1] = (element*) zone_memoire;
+    TZL[WBUDDY_MAX_INDEX - 1]->suivant = NULL;
     return 0;
 }
 
@@ -167,10 +169,10 @@ void * mem_alloc(unsigned long size) {
 		for (i = WBUDDY_MAX_INDEX - 1; i >= 0; i--) {
 			if (TZL[i] != NULL && SIZE[i] >= size) {
 				if (SIZE[i] == size) {
-					Element * elem = TZL[i];
+					element * elem = TZL[i];
 					if (elem->suivant !=NULL) {
-						Element * parent = TZL[i];
-						while (elem->suivant != NULL) {
+						element * parent = TZL[i];
+						while (elem->suivant != NULL && verifier_adr_mem(elem->suivant)) {
 							parent = elem;
 							elem = elem->suivant;
 						}
@@ -181,10 +183,10 @@ void * mem_alloc(unsigned long size) {
 					return (void*) elem;
 				} else {
 					//Faire les partitions
-					Element * temp = TZL[i];
-					if (temp->suivant != NULL){
-						Element * parent = TZL[i];
-						while (temp->suivant != NULL) {
+					element * temp = TZL[i];
+					if (i < 37 && temp->suivant != NULL){
+						element * parent = TZL[i];
+						while (temp->suivant != NULL && verifier_adr_mem(temp->suivant)) {
 							parent = temp;
 							temp = temp->suivant;
 						}
@@ -193,8 +195,8 @@ void * mem_alloc(unsigned long size) {
 						TZL[i] = NULL;
 					}
 					if (TZL[SUBBUDDY[i]] != NULL) {
-						Element * elm = TZL[SUBBUDDY[i]];
-						while (elm->suivant != NULL) {
+						element * elm = TZL[SUBBUDDY[i]];
+						while (elm->suivant != NULL && verifier_adr_mem(elm->suivant)) {
 							elm = elm->suivant;
 						}
 						elm->suivant = temp;
@@ -202,13 +204,13 @@ void * mem_alloc(unsigned long size) {
 						TZL[SUBBUDDY[i]] = temp;
 					}
 					if (TZL[i - 1] != NULL) {
-						Element * elm = TZL[i - 1];
-						while (elm->suivant != NULL) {
+						element * elm = TZL[i - 1];
+						while (elm->suivant != NULL && verifier_adr_mem(elm->suivant)) {
 							elm = elm->suivant;
 						}
-						elm->suivant = (Element*) ((char*) temp + SIZE[SUBBUDDY[i]]);
+						elm->suivant = (element*) ((char*) temp + SIZE[SUBBUDDY[i]]);
 					} else {
-						TZL[i - 1] = (Element*) ((char*) temp + SIZE[SUBBUDDY[i]]);
+						TZL[i - 1] = (element*) ((char*) temp + SIZE[SUBBUDDY[i]]);
 					}
 					
 				}
@@ -225,11 +227,6 @@ void * mem_alloc(unsigned long size) {
     }
 }
 
-/*
-libère la zone commençant
-à l’adresse zone de taille tailleZone (valeur renvoyée par mem_alloc). Un retour d’erreur
-sera retourné en cas de problème, sinon 0 sera retourné si tout s’est bien passé.
- */
 int mem_free(void *ptr, unsigned long size) {
 
     //la memoire a ete detruite
@@ -239,105 +236,39 @@ int mem_free(void *ptr, unsigned long size) {
     }
 
     // on ne peut pas liberer une zone situe hors de la zone permis
-
-    if ((ptr < zone_memoire) || (ptr > (zone_memoire + ALLOC_MEM_SIZE))) {
+    if (!verifier_adr_mem(ptr)) {
         perror("mem_free:");
         return 1;
     }
 
-    // Je connais mon size, alors je vais trouver ma place dans tzl, apres je serai ajouté a la liste et deviendrai free et allocable
     int idx = trouver_idx_size(size);
-    //Laisse un ptr sur l'adresse que je dois ajouter
     if (TZL[idx] != NULL) {
-        Element * elm = TZL[idx];
-        while (elm->suivant != NULL) {
+        element * elm = TZL[idx];
+        while (elm->suivant != NULL && verifier_adr_mem(elm->suivant)) {
             elm = elm->suivant;
         }
         elm->suivant = ptr;
     } else {
         TZL[idx] = ptr;
     }
-   
-    //On essai de faire la fusion entre les buddys... le petit à gauche et le grande à droit... fait dans autre methode.
-printf("xxx");
     fusioner_buddys(idx, ptr);
 
     return 0;
 }
 
-
-
-/*libère toutes les structures et la zone de mémoire utilisées.*/
-
 int mem_destroy() {
-    /* ecrire votre code ici */
     if (zone_memoire == NULL) {
         perror("mem_destroy:");
         return 1;
     }
-    
     int i;
     for (i = 0; i < WBUDDY_MAX_INDEX; i++){
-		TZL[i] = NULL;
-	}
-
-    
-
+        if (TZL[i] != NULL){
+	        TZL[i]->suivant = NULL;
+            TZL[i] = NULL;
+        }
+    }
     free(zone_memoire);
-    return 0;
-}
-
-int main(void) {
-    mem_init();
-    printf("%p\n", zone_memoire);
-    int i;
-    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
-        printf("%d ", i);
-        printf("%d \t", SIZE[i]);
-        printf("%d \t", SUBBUDDY[i]);
-        printf("%p", TZL[i]);
-        Element * elm = TZL[i];
-        while (elm != NULL && elm->suivant != NULL) {
-            if (elm->suivant != NULL) {
-                printf("\t %p", elm->suivant);
-                elm = elm->suivant;
-            }
-        }
-        printf("\n");
-    }
-    void * mem = mem_alloc((1<<17));
-    printf("%p\n", mem);
-    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
-        printf("%d ", i);
-        printf("%d \t", SIZE[i]);
-        printf("%d \t", SUBBUDDY[i]);
-        printf("%p", TZL[i]);
-        Element * elm = TZL[i];
-        while (elm != NULL && elm->suivant != NULL) {
-            if (elm->suivant != NULL) {
-                printf("\t %p", elm->suivant);
-                elm = elm->suivant;
-            }
-        }
-        printf("\n");
-    }
-    
-    printf("mem_free: %i", mem_free(mem, (1<<17)));
-    printf("\n");
-    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
-        printf("%d ", i);
-        printf("%d \t", SIZE[i]);
-        printf("%d \t", SUBBUDDY[i]);
-        printf("%p", TZL[i]);
-        Element * elm = TZL[i];
-        while (elm != NULL && elm->suivant != NULL) {
-            if (elm->suivant != NULL) {
-                printf("\t %p", elm->suivant);
-                elm = elm->suivant;
-            }
-        }
-        printf("\n");
-    }
-
+    zone_memoire = 0;
     return 0;
 }
