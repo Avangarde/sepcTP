@@ -21,16 +21,6 @@ int SIZE[WBUDDY_MAX_INDEX];
 int SUBBUDDY[WBUDDY_MAX_INDEX];
 Element * TZL[WBUDDY_MAX_INDEX];
 
-int find_index(int a[], int num_elements, int value) {
-    int i;
-    for (i = 0; i < num_elements; i++) {
-        if (a[i] == value) {
-            return (i); /* it was found */
-        }
-    }
-    return (-1); /* if it was not found */
-}
-
 int trouver_idx_size(int size) {
     int derniere_size = SIZE[0];
     int cmpt = 0;
@@ -79,9 +69,7 @@ void fusioner_buddys(int idx_cible, void *adr) {
         }
     }
     
-    printf("adr buddy %p\n", adr_buddy);
     int idxbuddy = trouver_idx_size(buddysize);
-    printf("indice buddy: %i", idxbuddy);
 
     //Necesito conocer simi buddy esta ocupado, si no lo esta he de borrarlo de una vez
     if (TZL[idxbuddy] != adr_buddy && TZL[idxbuddy] != NULL) {
@@ -137,21 +125,6 @@ void fusioner_buddys(int idx_cible, void *adr) {
     }
 
     //Llamamos recursivamente al metodo para intentar continuar
-    int i;
-    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
-        printf("%d ", i);
-        printf("%d \t", SIZE[i]);
-        printf("%d \t", SUBBUDDY[i]);
-        printf("%p", TZL[i]);
-        Element * elm = TZL[i];
-        while (elm != NULL && elm->suivant != NULL) {
-            if (elm->suivant != NULL) {
-                printf("\t %p", elm->suivant);
-                elm = elm->suivant;
-            }
-        }
-        printf("\n");
-    }
 
     fusioner_buddys(new_idx, new_adr);
 
@@ -179,7 +152,7 @@ int mem_init() {
     //Initialisation de SUBBUDDY
     SUBBUDDY[0] = 0;
     for (i = 1; i < WBUDDY_MAX_INDEX; i++) {
-        SUBBUDDY[i] = find_index(SIZE, WBUDDY_MAX_INDEX, (SIZE[i] - SIZE[i - 1]));
+        SUBBUDDY[i] = trouver_idx_size(SIZE[i] - SIZE[i - 1]);
     }
 
     //Initialisation de TZL
@@ -189,51 +162,67 @@ int mem_init() {
 }
 
 void * mem_alloc(unsigned long size) {
-    int i;
-    for (i = WBUDDY_MAX_INDEX - 1; i >= 0; i--) {
-        if (TZL[i] != NULL && SIZE[i] >= size) {
-            if (SIZE[i] == size) {
-                Element * elem = TZL[i];
-                Element * parent = TZL[i];
-                    while (elem->suivant != NULL) {
-                        parent = elem;
-                        elem = elem->suivant;
-                    }
-                    parent->suivant = NULL;
-                return (void*) elem;
-            } else {
-                //Faire les partitions
-                if (TZL[SUBBUDDY[i]] != NULL) {
-                    Element * elm = TZL[SUBBUDDY[i]];
-                    while (elm->suivant != NULL) {
-                        elm = elm->suivant;
-                    }
-                    elm->suivant = TZL[i];
-                } else {
-                    TZL[SUBBUDDY[i]] = TZL[i];
-                }
-                if (TZL[i - 1] != NULL) {
-                    Element * elm = TZL[i - 1];
-                    while (elm->suivant != NULL) {
-                        elm = elm->suivant;
-                    }
-                    elm->suivant = (Element*) ((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
-                } else {
-                    TZL[i - 1] = (Element*) ((char*) TZL[i] + SIZE[SUBBUDDY[i]]);
-                }
-                if (TZL[i]->suivant != NULL) {
-                    TZL[i] = TZL[i]->suivant;
-                } else {
-                    TZL[i] = NULL;
-                }
-            }
-        }
+	if (size > 0 && size <= ALLOC_MEM_SIZE) {
+		int i;
+		for (i = WBUDDY_MAX_INDEX - 1; i >= 0; i--) {
+			if (TZL[i] != NULL && SIZE[i] >= size) {
+				if (SIZE[i] == size) {
+					Element * elem = TZL[i];
+					if (elem->suivant !=NULL) {
+						Element * parent = TZL[i];
+						while (elem->suivant != NULL) {
+							parent = elem;
+							elem = elem->suivant;
+						}
+						parent->suivant = NULL;
+					} else {
+						TZL[i] = NULL;
+					}
+					return (void*) elem;
+				} else {
+					//Faire les partitions
+					Element * temp = TZL[i];
+					if (temp->suivant != NULL){
+						Element * parent = TZL[i];
+						while (temp->suivant != NULL) {
+							parent = temp;
+							temp = temp->suivant;
+						}
+						parent->suivant = NULL;
+					} else {
+						TZL[i] = NULL;
+					}
+					if (TZL[SUBBUDDY[i]] != NULL) {
+						Element * elm = TZL[SUBBUDDY[i]];
+						while (elm->suivant != NULL) {
+							elm = elm->suivant;
+						}
+						elm->suivant = temp;
+					} else {
+						TZL[SUBBUDDY[i]] = temp;
+					}
+					if (TZL[i - 1] != NULL) {
+						Element * elm = TZL[i - 1];
+						while (elm->suivant != NULL) {
+							elm = elm->suivant;
+						}
+						elm->suivant = (Element*) ((char*) temp + SIZE[SUBBUDDY[i]]);
+					} else {
+						TZL[i - 1] = (Element*) ((char*) temp + SIZE[SUBBUDDY[i]]);
+					}
+					
+				}
+			}
+		}
+		if (i == -1) {
+			perror("mem_alloc:");
+			return 0;
+		}
+		return 0;
+	} else {
+	   perror("mem_alloc:");
+	   return 0; 
     }
-    if (i == -1) {
-        perror("mem_alloc:");
-        return NULL;
-    }
-    return 0;
 }
 
 /*
@@ -242,24 +231,22 @@ libère la zone commençant
 sera retourné en cas de problème, sinon 0 sera retourné si tout s’est bien passé.
  */
 int mem_free(void *ptr, unsigned long size) {
-    /* ecrire votre code ici */
 
     //la memoire a ete detruite
     if (zone_memoire == NULL) {
         perror("mem_free:");
-        return 1;
+        return -1;
     }
 
     // on ne peut pas liberer une zone situe hors de la zone permis
 
-    if ((ptr < zone_memoire) || (ptr > zone_memoire + ALLOC_MEM_SIZE)) {
+    if ((ptr < zone_memoire) || (ptr > (zone_memoire + ALLOC_MEM_SIZE))) {
         perror("mem_free:");
         return 1;
     }
 
     // Je connais mon size, alors je vais trouver ma place dans tzl, apres je serai ajouté a la liste et deviendrai free et allocable
     int idx = trouver_idx_size(size);
-    printf("indice: %i\n", idx);
     //Laisse un ptr sur l'adresse que je dois ajouter
     if (TZL[idx] != NULL) {
         Element * elm = TZL[idx];
@@ -270,25 +257,9 @@ int mem_free(void *ptr, unsigned long size) {
     } else {
         TZL[idx] = ptr;
     }
-    int i;
-    printf("Antes de fusionar:\n");
-    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
-        printf("%d ", i);
-        printf("%d \t", SIZE[i]);
-        printf("%d \t", SUBBUDDY[i]);
-        printf("%p", TZL[i]);
-        Element * elm = TZL[i];
-        while (elm != NULL && elm->suivant != NULL) {
-            if (elm->suivant != NULL) {
-                printf("\t %p", elm->suivant);
-                elm = elm->suivant;
-            }
-        }
-        printf("\n");
-    }
-
+   
     //On essai de faire la fusion entre les buddys... le petit à gauche et le grande à droit... fait dans autre methode.
-
+printf("xxx");
     fusioner_buddys(idx, ptr);
 
     return 0;
@@ -300,11 +271,17 @@ int mem_free(void *ptr, unsigned long size) {
 
 int mem_destroy() {
     /* ecrire votre code ici */
-
     if (zone_memoire == NULL) {
         perror("mem_destroy:");
         return 1;
     }
+    
+    int i;
+    for (i = 0; i < WBUDDY_MAX_INDEX; i++){
+		TZL[i] = NULL;
+	}
+
+    
 
     free(zone_memoire);
     zone_memoire = 0;
@@ -314,8 +291,6 @@ int mem_destroy() {
 int main(void) {
     mem_init();
     printf("%p\n", zone_memoire);
-    void * mem = mem_alloc(262144);
-    printf("%p\n", mem);
     int i;
     for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
         printf("%d ", i);
@@ -331,9 +306,25 @@ int main(void) {
         }
         printf("\n");
     }
+    void * mem = mem_alloc((1<<17));
+    printf("%p\n", mem);
+    for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
+        printf("%d ", i);
+        printf("%d \t", SIZE[i]);
+        printf("%d \t", SUBBUDDY[i]);
+        printf("%p", TZL[i]);
+        Element * elm = TZL[i];
+        while (elm != NULL && elm->suivant != NULL) {
+            if (elm->suivant != NULL) {
+                printf("\t %p", elm->suivant);
+                elm = elm->suivant;
+            }
+        }
+        printf("\n");
+    }
     
-    mem_free(mem, 262144);
-    
+    printf("mem_free: %i", mem_free(mem, (1<<17)));
+    printf("\n");
     for (i = 0; i < WBUDDY_MAX_INDEX; i++) {
         printf("%d ", i);
         printf("%d \t", SIZE[i]);
